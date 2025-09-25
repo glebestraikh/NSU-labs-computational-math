@@ -274,16 +274,13 @@ func main() {
 	fmt.Printf("=== Лабораторная работа №1: Интерполяция ===\n")
 
 	// Параметры для интерполяции
-	a, b := -1.0, 3.0
+	a, b := -3.0, 3.0
 
 	// Тестирование с разным количеством узлов
-	nValues := []int{5, 10, 30}
+	nValues := []int{3, 6, 9}
 
 	for _, n := range nValues {
 		fmt.Printf("=== Тестирование с N = %d узлами ===\n", n)
-
-		// Создаем данные с тестовой функцией x * log10(x + 1) - 1
-		//fmt.Printf("Функция: f(x) = x * log10(x + 1) - 1, интервал [%.1f, %.1f]\n\n", a, b)
 
 		data := CreateGrid(a, b, n, ModuleFunction)
 		PrintTable(data)
@@ -292,3 +289,5 @@ func main() {
 		CompareInterpolations(data, ModuleFunction)
 	}
 }
+
+// реализовать интерполяционый полином через узлы чебышева
