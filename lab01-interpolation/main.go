@@ -23,6 +23,7 @@ func TestFunction(x float64) float64 {
 	return x*math.Log10(x+1) - 1
 }
 
+// ModuleFunction - тестовая функция модуля
 func ModuleFunction(x float64) float64 {
 	return math.Abs(x)
 }
@@ -137,7 +138,7 @@ func SolveLinearSystem(A *Matrix, b []float64) []float64 {
 type CubicSpline struct {
 	Points            []Point
 	SecondDerivatives []float64
-	H                 []float64 // шаги между узлами
+	H                 []float64
 }
 
 // NewCubicSpline создает кубический сплайн с естественными граничными условиями
@@ -282,9 +283,9 @@ func main() {
 		fmt.Printf("=== Тестирование с N = %d узлами ===\n", n)
 
 		// Создаем данные с тестовой функцией x * log10(x + 1) - 1
-		fmt.Printf("Функция: f(x) = x * log10(x + 1) - 1, интервал [%.1f, %.1f]\n\n", a, b)
+		//fmt.Printf("Функция: f(x) = x * log10(x + 1) - 1, интервал [%.1f, %.1f]\n\n", a, b)
 
-		data := CreateGrid(a, b, n, TestFunction)
+		data := CreateGrid(a, b, n, ModuleFunction)
 		PrintTable(data)
 
 		// Сравниваем методы интерполяции
