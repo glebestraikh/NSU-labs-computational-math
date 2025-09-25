@@ -23,6 +23,10 @@ func TestFunction(x float64) float64 {
 	return x*math.Log10(x+1) - 1
 }
 
+func ModuleFunction(x float64) float64 {
+	return math.Abs(x)
+}
+
 // CreateGrid создает равномерную сетку точек
 func CreateGrid(a, b float64, n int, f func(float64) float64) *InterpolationData {
 	h := (b - a) / float64(n)
@@ -102,23 +106,6 @@ func SolveLinearSystem(A *Matrix, b []float64) []float64 {
 
 	// Прямой ход метода Гаусса
 	for i := 0; i < n; i++ {
-		// Поиск главного элемента
-		maxRow := i
-		for k := i + 1; k < n; k++ {
-			if math.Abs(augmented.Get(k, i)) > math.Abs(augmented.Get(maxRow, i)) {
-				maxRow = k
-			}
-		}
-
-		// Обмен строк
-		if maxRow != i {
-			for j := 0; j <= n; j++ {
-				temp := augmented.Get(i, j)
-				augmented.Set(i, j, augmented.Get(maxRow, j))
-				augmented.Set(maxRow, j, temp)
-			}
-		}
-
 		// Приведение к верхнетреугольному виду
 		for k := i + 1; k < n; k++ {
 			if math.Abs(augmented.Get(i, i)) < 1e-12 {
@@ -277,7 +264,7 @@ func CompareInterpolations(data *InterpolationData, testFunc func(float64) float
 			moreAccurate = "Одинаково"
 		}
 
-		fmt.Printf("%-10.4f %-15.6f %-15.6f %-15.6f %-15.6f %-15.6f %-15s\n", x, original, lagrange, errorLagrange, splineVal, errorSpline, moreAccurate)
+		fmt.Printf("%-10.4f %-15.6f %-15.6f %-15.6e %-15.6f %-15.6e %-15s\n", x, original, lagrange, errorLagrange, splineVal, errorSpline, moreAccurate)
 	}
 	fmt.Println()
 }
@@ -286,10 +273,10 @@ func main() {
 	fmt.Printf("=== Лабораторная работа №1: Интерполяция ===\n")
 
 	// Параметры для интерполяции
-	a, b := 1.0, 6.0
+	a, b := -1.0, 3.0
 
 	// Тестирование с разным количеством узлов
-	nValues := []int{5}
+	nValues := []int{5, 10, 30}
 
 	for _, n := range nValues {
 		fmt.Printf("=== Тестирование с N = %d узлами ===\n", n)
@@ -301,6 +288,6 @@ func main() {
 		PrintTable(data)
 
 		// Сравниваем методы интерполяции
-		CompareInterpolations(data, TestFunction)
+		CompareInterpolations(data, ModuleFunction)
 	}
 }
