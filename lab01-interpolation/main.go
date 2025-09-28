@@ -6,50 +6,50 @@ import (
 	"strings"
 )
 
-// Point представляет точку (x, y)
-type Point struct {
-	X, Y float64
+// point представляет точку (x, y)
+type point struct {
+	x, y float64
 }
 
-// InterpolationData содержит исходные данные для интерполяции
-type InterpolationData struct {
-	Points []Point // Узлы интерполяции
-	A, B   float64 // Интервал [A, B]
-	N      int     // Количество узлов
+// interpolationData содержит исходные данные для интерполяции
+type interpolationData struct {
+	points []point // Узлы интерполяции
+	a, b   float64 // Интервал [a, b]
+	n      int     // Количество узлов
 }
 
-// TestFunction - тестовая функция x * log10(x + 1) - 1
-func TestFunction(x float64) float64 {
+// testFunction - тестовая функция x * log10(x + 1) - 1
+func testFunction(x float64) float64 {
 	return x*math.Log10(x+1) - 1
 }
 
-// ModuleFunction - тестовая функция модуля
-func ModuleFunction(x float64) float64 {
+// moduleFunction - тестовая функция модуля
+func moduleFunction(x float64) float64 {
 	return math.Abs(x)
 }
 
-// CreateGrid создает равномерную сетку точек
-func CreateGrid(a, b float64, n int, f func(float64) float64) *InterpolationData {
+// createGrid создает равномерную сетку точек
+func createGrid(a, b float64, n int, f func(float64) float64) *interpolationData {
 	h := (b - a) / float64(n)
-	points := make([]Point, n+1)
+	points := make([]point, n+1)
 
 	for i := 0; i <= n; i++ {
 		x := a + float64(i)*h
 		y := f(x)
-		points[i] = Point{X: x, Y: y}
+		points[i] = point{x: x, y: y}
 	}
 
-	return &InterpolationData{
-		Points: points,
-		A:      a,
-		B:      b,
-		N:      n,
+	return &interpolationData{
+		points: points,
+		a:      a,
+		b:      b,
+		n:      n,
 	}
 }
 
-// LagrangeInterpolation вычисляет значение интерполяционного полинома Лагранжа в точке x
-func LagrangeInterpolation(data *InterpolationData, x float64) float64 {
-	n := len(data.Points)
+// lagrangeInterpolation вычисляет значение интерполяционного полинома Лагранжа в точке x
+func lagrangeInterpolation(data *interpolationData, x float64) float64 {
+	n := len(data.points)
 	result := 0.0
 
 	for i := 0; i < n; i++ {
@@ -57,64 +57,61 @@ func LagrangeInterpolation(data *InterpolationData, x float64) float64 {
 		li := 1.0
 		for j := 0; j < n; j++ {
 			if i != j {
-				li *= (x - data.Points[j].X) / (data.Points[i].X - data.Points[j].X)
+				li *= (x - data.points[j].x) / (data.points[i].x - data.points[j].x)
 			}
 		}
-		result += data.Points[i].Y * li
+		result += data.points[i].y * li
 	}
 
 	return result
 }
 
-// Matrix представляет матрицу для решения системы линейных уравнений
-type Matrix struct {
+type matrix struct {
 	data [][]float64
 	rows int
 	cols int
 }
 
-// NewMatrix создает новую матрицу
-func NewMatrix(rows, cols int) *Matrix {
+// newMatrix создает новую матрицу
+func newMatrix(rows, cols int) *matrix {
 	data := make([][]float64, rows)
 	for i := range data {
 		data[i] = make([]float64, cols)
 	}
-	return &Matrix{data: data, rows: rows, cols: cols}
+	return &matrix{data: data, rows: rows, cols: cols}
 }
 
-// Set устанавливает значение элемента матрицы
-func (m *Matrix) Set(i, j int, val float64) {
+func (m *matrix) set(i, j int, val float64) {
 	m.data[i][j] = val
 }
 
-// Get получает значение элемента матрицы
-func (m *Matrix) Get(i, j int) float64 {
+func (m *matrix) get(i, j int) float64 {
 	return m.data[i][j]
 }
 
-// SolveLinearSystem решает систему линейных уравнений Ax = b методом Гаусса
-func SolveLinearSystem(A *Matrix, b []float64) []float64 {
-	n := A.rows
+// solveLinearSystem решает систему линейных уравнений Ax = b методом Гаусса
+func solveLinearSystem(a *matrix, b []float64) []float64 {
+	n := a.rows
 
 	// Создаем расширенную матрицу
-	augmented := NewMatrix(n, n+1)
+	augmented := newMatrix(n, n+1)
 	for i := 0; i < n; i++ {
 		for j := 0; j < n; j++ {
-			augmented.Set(i, j, A.Get(i, j))
+			augmented.set(i, j, a.get(i, j))
 		}
-		augmented.Set(i, n, b[i])
+		augmented.set(i, n, b[i])
 	}
 
 	// Прямой ход метода Гаусса
 	for i := 0; i < n; i++ {
 		// Приведение к верхнетреугольному виду
 		for k := i + 1; k < n; k++ {
-			if math.Abs(augmented.Get(i, i)) < 1e-12 {
+			if math.Abs(augmented.get(i, i)) < 1e-12 {
 				continue
 			}
-			factor := augmented.Get(k, i) / augmented.Get(i, i)
+			factor := augmented.get(k, i) / augmented.get(i, i)
 			for j := i; j <= n; j++ {
-				augmented.Set(k, j, augmented.Get(k, j)-factor*augmented.Get(i, j))
+				augmented.set(k, j, augmented.get(k, j)-factor*augmented.get(i, j))
 			}
 		}
 	}
@@ -122,36 +119,36 @@ func SolveLinearSystem(A *Matrix, b []float64) []float64 {
 	// Обратный ход
 	solution := make([]float64, n)
 	for i := n - 1; i >= 0; i-- {
-		solution[i] = augmented.Get(i, n)
+		solution[i] = augmented.get(i, n)
 		for j := i + 1; j < n; j++ {
-			solution[i] -= augmented.Get(i, j) * solution[j]
+			solution[i] -= augmented.get(i, j) * solution[j]
 		}
-		if math.Abs(augmented.Get(i, i)) > 1e-12 {
-			solution[i] /= augmented.Get(i, i)
+		if math.Abs(augmented.get(i, i)) > 1e-12 {
+			solution[i] /= augmented.get(i, i)
 		}
 	}
 
 	return solution
 }
 
-// CubicSpline представляет кубический сплайн с прямым вычислением по формуле
-type CubicSpline struct {
-	Points            []Point
-	SecondDerivatives []float64
-	H                 []float64
+// cubicSpline представляет кубический сплайн с прямым вычислением по формуле
+type cubicSpline struct {
+	points            []point
+	secondDerivatives []float64
+	h                 []float64
 }
 
-// NewCubicSpline создает кубический сплайн с естественными граничными условиями
-func NewCubicSpline(data *InterpolationData) *CubicSpline {
-	points := data.Points
+// newCubicSpline создает кубический сплайн с естественными граничными условиями
+func newCubicSpline(data *interpolationData) *cubicSpline {
+	points := data.points
 	n := len(points)
 
 	// Извлекаем x и y координаты
 	x := make([]float64, n)
 	y := make([]float64, n)
 	for i := 0; i < n; i++ {
-		x[i] = points[i].X
-		y[i] = points[i].Y
+		x[i] = points[i].x
+		y[i] = points[i].y
 	}
 
 	// Вычисляем h[i] = x[i+1] - x[i]
@@ -160,42 +157,42 @@ func NewCubicSpline(data *InterpolationData) *CubicSpline {
 		h[i] = x[i+1] - x[i]
 	}
 
-	// Создаем матрицу A и вектор B для системы уравнений
-	A := NewMatrix(n, n)
-	B := make([]float64, n)
+	// Создаем матрицу a и вектор b для системы уравнений
+	a := newMatrix(n, n)
+	b := make([]float64, n)
 
 	// Заполняем систему уравнений для внутренних точек
 	for i := 1; i < n-1; i++ {
-		A.Set(i, i-1, h[i-1])
-		A.Set(i, i, 2*(h[i-1]+h[i]))
-		A.Set(i, i+1, h[i])
-		B[i] = 6 * ((y[i+1]-y[i])/h[i] - (y[i]-y[i-1])/h[i-1])
+		a.set(i, i-1, h[i-1])
+		a.set(i, i, 2*(h[i-1]+h[i]))
+		a.set(i, i+1, h[i])
+		b[i] = 6 * ((y[i+1]-y[i])/h[i] - (y[i]-y[i-1])/h[i-1])
 	}
 
 	// Граничные условия для естественного сплайна (вторые производные на концах равны нулю)
-	A.Set(0, 0, 1)
-	A.Set(n-1, n-1, 1)
-	B[0] = 0
-	B[n-1] = 0
+	a.set(0, 0, 1)
+	a.set(n-1, n-1, 1)
+	b[0] = 0
+	b[n-1] = 0
 
 	// Решаем систему для вторых производных
-	secondDerivatives := SolveLinearSystem(A, B)
+	secondDerivatives := solveLinearSystem(a, b)
 
-	return &CubicSpline{
-		Points:            points,
-		SecondDerivatives: secondDerivatives,
-		H:                 h,
+	return &cubicSpline{
+		points:            points,
+		secondDerivatives: secondDerivatives,
+		h:                 h,
 	}
 }
 
 // Evaluate вычисляет значение сплайна в точке x по формуле (2.61)
-func (cs *CubicSpline) Evaluate(x float64) float64 {
-	n := len(cs.Points)
+func (cs *cubicSpline) evaluate(x float64) float64 {
+	n := len(cs.points)
 
 	// Находим интервал, содержащий точку x
 	i := 0
 	for i < n-1 {
-		if x >= cs.Points[i].X && x <= cs.Points[i+1].X {
+		if x >= cs.points[i].x && x <= cs.points[i+1].x {
 			break
 		}
 		i++
@@ -206,52 +203,52 @@ func (cs *CubicSpline) Evaluate(x float64) float64 {
 	//      + γ_i * ((x_{i+1} - x)³ - h²_{i+1}(x_{i+1} - x))/(6h_{i+1})
 	//      + γ_{i+1} * ((x - x_i)³ - h²_{i+1}(x - x_i))/(6h_{i+1})
 
-	xi := cs.Points[i].X
-	xi1 := cs.Points[i+1].X
-	yi := cs.Points[i].Y
-	yi1 := cs.Points[i+1].Y
-	hi1 := cs.H[i]
-	gammai := cs.SecondDerivatives[i]
-	gammai1 := cs.SecondDerivatives[i+1]
+	xi := cs.points[i].x
+	xi1 := cs.points[i+1].x
+	yi := cs.points[i].y
+	yi1 := cs.points[i+1].y
+	hi1 := cs.h[i]
+	gammai := cs.secondDerivatives[i]
+	gammai1 := cs.secondDerivatives[i+1]
 
 	term1 := yi * (xi1 - x) / hi1
 	term2 := yi1 * (x - xi) / hi1
 
-	xi1MinusX := xi1 - x
-	xMinusXi := x - xi
+	xi1minusx := xi1 - x
+	xminusxi := x - xi
 
-	term3 := gammai * (xi1MinusX*xi1MinusX*xi1MinusX - hi1*hi1*xi1MinusX) / (6 * hi1)
-	term4 := gammai1 * (xMinusXi*xMinusXi*xMinusXi - hi1*hi1*xMinusXi) / (6 * hi1)
+	term3 := gammai * (xi1minusx*xi1minusx*xi1minusx - hi1*hi1*xi1minusx) / (6 * hi1)
+	term4 := gammai1 * (xminusxi*xminusxi*xminusxi - hi1*hi1*xminusxi) / (6 * hi1)
 
 	return term1 + term2 + term3 + term4
 }
 
-// PrintTable выводит таблицу исходных данных
-func PrintTable(data *InterpolationData) {
+// printTable выводит таблицу исходных данных
+func printTable(data *interpolationData) {
 	fmt.Println("Таблица исходных данных:")
 	fmt.Printf("%-10s %-15s\n", "xi", "f(xi)")
 	fmt.Println(strings.Repeat("-", 25))
 
-	for _, point := range data.Points {
-		fmt.Printf("%-10.4f %-15.6f\n", point.X, point.Y)
+	for _, point := range data.points {
+		fmt.Printf("%-10.4f %-15.6f\n", point.x, point.y)
 	}
 	fmt.Println()
 }
 
-// CompareInterpolations сравнивает методы интерполяции
-func CompareInterpolations(data *InterpolationData, testFunc func(float64) float64) {
+// compareInterpolations сравнивает методы интерполяции
+func compareInterpolations(data *interpolationData, testfunc func(float64) float64) {
 	fmt.Println("Сравнение методов интерполяции:")
 	fmt.Printf("%-10s %-15s %-15s %-15s %-15s %-15s %-15s\n", "x", "Исходная f(x)", "Лагранж", "Ошибка Лагр", "Сплайн", "Ошибка Спл", "Точнее")
 	fmt.Println(strings.Repeat("-", 110))
 
-	spline := NewCubicSpline(data)
+	spline := newCubicSpline(data)
 
 	for i := 0; i < 20; i++ {
-		x := data.A + float64(i)*(data.B-data.A)/19.0
+		x := data.a + float64(i)*(data.b-data.a)/19.0
 
-		original := testFunc(x)
-		lagrange := LagrangeInterpolation(data, x)
-		splineVal := spline.Evaluate(x)
+		original := testfunc(x)
+		lagrange := lagrangeInterpolation(data, x)
+		splineVal := spline.evaluate(x)
 
 		errorLagrange := math.Abs(original - lagrange)
 		errorSpline := math.Abs(original - splineVal)
@@ -282,12 +279,10 @@ func main() {
 	for _, n := range nValues {
 		fmt.Printf("=== Тестирование с N = %d узлами ===\n", n)
 
-		data := CreateGrid(a, b, n, ModuleFunction)
-		PrintTable(data)
+		data := createGrid(a, b, n, testFunction)
+		printTable(data)
 
 		// Сравниваем методы интерполяции
-		CompareInterpolations(data, ModuleFunction)
+		compareInterpolations(data, testFunction)
 	}
 }
-
-// реализовать интерполяционый полином через узлы чебышева
