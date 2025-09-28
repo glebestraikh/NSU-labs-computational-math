@@ -236,7 +236,7 @@ func printTable(data *interpolationData) {
 }
 
 // compareInterpolations сравнивает методы интерполяции
-func compareInterpolations(data *interpolationData, testfunc func(float64) float64) {
+func compareInterpolations(data *interpolationData, testFunc func(float64) float64) {
 	fmt.Println("Сравнение методов интерполяции:")
 	fmt.Printf("%-10s %-15s %-15s %-15s %-15s %-15s %-15s\n", "x", "Исходная f(x)", "Лагранж", "Ошибка Лагр", "Сплайн", "Ошибка Спл", "Точнее")
 	fmt.Println(strings.Repeat("-", 110))
@@ -246,7 +246,7 @@ func compareInterpolations(data *interpolationData, testfunc func(float64) float
 	for i := 0; i < 20; i++ {
 		x := data.a + float64(i)*(data.b-data.a)/19.0
 
-		original := testfunc(x)
+		original := testFunc(x)
 		lagrange := lagrangeInterpolation(data, x)
 		splineVal := spline.evaluate(x)
 
@@ -271,7 +271,7 @@ func main() {
 	fmt.Printf("=== Лабораторная работа №1: Интерполяция ===\n")
 
 	// Параметры для интерполяции
-	a, b := -3.0, 3.0
+	a, b := 0.0, 3.0
 
 	// Тестирование с разным количеством узлов
 	nValues := []int{3, 6, 9}
