@@ -47,6 +47,28 @@ func createGrid(a, b float64, n int, f func(float64) float64) *interpolationData
 	}
 }
 
+// createChebyshevGrid создает сетку точек на основе узлов Чебышева
+func createChebyshevGrid(a, b float64, n int, f func(float64) float64) *interpolationData {
+	points := make([]point, n+1)
+
+	for i := 0; i <= n; i++ {
+		// Узлы Чебышева на интервале [-1, 1]
+		ti := math.Cos(math.Pi * float64(2*i+1) / float64(2*(n+1)))
+
+		// Преобразование в интервал [a, b]
+		x := (a+b)/2 + (b-a)/2*ti
+		y := f(x)
+		points[i] = point{x: x, y: y}
+	}
+
+	return &interpolationData{
+		points: points,
+		a:      a,
+		b:      b,
+		n:      n,
+	}
+}
+
 // lagrangeInterpolation вычисляет значение интерполяционного полинома Лагранжа в точке x
 func lagrangeInterpolation(data *interpolationData, x float64) float64 {
 	n := len(data.points)
@@ -199,10 +221,6 @@ func (cs *cubicSpline) evaluate(x float64) float64 {
 	}
 
 	// формула (2.61)
-	// S(x) = y_i * (x_{i+1} - x)/h_{i+1} + y_{i+1} * (x - x_i)/h_{i+1}
-	//      + γ_i * ((x_{i+1} - x)³ - h²_{i+1}(x_{i+1} - x))/(6h_{i+1})
-	//      + γ_{i+1} * ((x - x_i)³ - h²_{i+1}(x - x_i))/(6h_{i+1})
-
 	xi := cs.points[i].x
 	xi1 := cs.points[i+1].x
 	yi := cs.points[i].y
@@ -224,8 +242,8 @@ func (cs *cubicSpline) evaluate(x float64) float64 {
 }
 
 // printTable выводит таблицу исходных данных
-func printTable(data *interpolationData) {
-	fmt.Println("Таблица исходных данных:")
+func printTable(data *interpolationData, title string) {
+	fmt.Printf("Таблица исходных данных (%s):\n", title)
 	fmt.Printf("%-10s %-15s\n", "xi", "f(xi)")
 	fmt.Println(strings.Repeat("-", 25))
 
@@ -236,34 +254,58 @@ func printTable(data *interpolationData) {
 }
 
 // compareInterpolations сравнивает методы интерполяции
-func compareInterpolations(data *interpolationData, testFunc func(float64) float64) {
+func compareInterpolations(uniformData, chebyshevData *interpolationData, testFunc func(float64) float64) {
 	fmt.Println("Сравнение методов интерполяции:")
-	fmt.Printf("%-10s %-15s %-15s %-15s %-15s %-15s %-15s\n", "x", "Исходная f(x)", "Лагранж", "Ошибка Лагр", "Сплайн", "Ошибка Спл", "Точнее")
+	fmt.Printf("%-10s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n",
+		"x", "f(x)", "пол Лагр", "Ош Лагр", "узлы Чеб", "Ош Чеб", "Сплайн", "Ош Спл")
 	fmt.Println(strings.Repeat("-", 110))
 
-	spline := newCubicSpline(data)
+	spline := newCubicSpline(uniformData)
 
 	for i := 0; i < 20; i++ {
-		x := data.a + float64(i)*(data.b-data.a)/19.0
+		x := uniformData.a + float64(i)*(uniformData.b-uniformData.a)/19.0
 
 		original := testFunc(x)
-		lagrange := lagrangeInterpolation(data, x)
+		lagrangeUniform := lagrangeInterpolation(uniformData, x)
+		lagrangeChebyshev := lagrangeInterpolation(chebyshevData, x)
 		splineVal := spline.evaluate(x)
 
-		errorLagrange := math.Abs(original - lagrange)
+		errorUniform := math.Abs(original - lagrangeUniform)
+		errorChebyshev := math.Abs(original - lagrangeChebyshev)
 		errorSpline := math.Abs(original - splineVal)
 
-		var moreAccurate string
-		if errorLagrange < errorSpline {
-			moreAccurate = "Лагр"
-		} else if errorSpline < errorLagrange {
-			moreAccurate = "Спл"
-		} else {
-			moreAccurate = "Одинаково"
-		}
-
-		fmt.Printf("%-10.4f %-15.6f %-15.6f %-15.6e %-15.6f %-15.6e %-15s\n", x, original, lagrange, errorLagrange, splineVal, errorSpline, moreAccurate)
+		fmt.Printf("%-10.4f %-12.6f %-12.6f %-12.6e %-12.6f %-12.6e %-12.6f %-12.6e\n",
+			x, original, lagrangeUniform, errorUniform, lagrangeChebyshev, errorChebyshev, splineVal, errorSpline)
 	}
+	fmt.Println()
+
+	maxErrorUniform := 0.0
+	maxErrorChebyshev := 0.0
+	maxErrorSpline := 0.0
+
+	for i := 0; i < 100; i++ {
+		x := uniformData.a + float64(i)*(uniformData.b-uniformData.a)/99.0
+		original := testFunc(x)
+
+		errorUniform := math.Abs(original - lagrangeInterpolation(uniformData, x))
+		errorChebyshev := math.Abs(original - lagrangeInterpolation(chebyshevData, x))
+		errorSpline := math.Abs(original - spline.evaluate(x))
+
+		if errorUniform > maxErrorUniform {
+			maxErrorUniform = errorUniform
+		}
+		if errorChebyshev > maxErrorChebyshev {
+			maxErrorChebyshev = errorChebyshev
+		}
+		if errorSpline > maxErrorSpline {
+			maxErrorSpline = errorSpline
+		}
+	}
+
+	fmt.Println("Максимальные ошибки:")
+	fmt.Printf("  Лагранж (равномерные узлы): %.6e\n", maxErrorUniform)
+	fmt.Printf("  Лагранж (узлы Чебышева):    %.6e\n", maxErrorChebyshev)
+	fmt.Printf("  Кубический сплайн:          %.6e\n", maxErrorSpline)
 	fmt.Println()
 }
 
@@ -271,18 +313,34 @@ func main() {
 	fmt.Printf("=== Лабораторная работа №1: Интерполяция ===\n")
 
 	// Параметры для интерполяции
-	a, b := 0.0, 3.0
+	a, b := 1.0, 5.0
 
 	// Тестирование с разным количеством узлов
-	nValues := []int{3, 6, 9}
+	nValues := []int{10}
 
 	for _, n := range nValues {
-		fmt.Printf("=== Тестирование с N = %d узлами ===\n", n)
+		fmt.Printf("\n=== Тестирование с N = %d узлами ===\n\n", n)
 
-		data := createGrid(a, b, n, testFunction)
-		printTable(data)
+		// Создаем равномерную сетку
+		uniformData := createGrid(a, b, n, testFunction)
+		printTable(uniformData, "равномерные узлы")
+
+		// Создаем сетку Чебышева
+		chebyshevData := createChebyshevGrid(a, b, n, testFunction)
+		printTable(chebyshevData, "узлы Чебышева")
 
 		// Сравниваем методы интерполяции
-		compareInterpolations(data, testFunction)
+		compareInterpolations(uniformData, chebyshevData, testFunction)
+
+		// Генерируем HTML файл с графиками
+		filename := fmt.Sprintf("interpolation_n%d.html", n)
+		err := generateHTML(uniformData, chebyshevData, testFunction, filename)
+		if err != nil {
+			fmt.Printf("Ошибка при создании HTML файла: %v\n", err)
+		} else {
+			fmt.Printf("✓ График сохранен в файл: %s\n\n", filename)
+		}
 	}
+
+	fmt.Println("Все графики созданы! Откройте HTML файлы в браузере для просмотра.")
 }
